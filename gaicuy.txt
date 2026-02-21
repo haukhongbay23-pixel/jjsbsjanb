@@ -1,0 +1,131 @@
+-- 1. Khởi tạo ScreenGui & MainFrame
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ChiiHauuMenu"
+screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+screenGui.ResetOnSpawn = false
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 220, 0, 380) 
+mainFrame.Position = UDim2.new(0.5, -110, 0.5, -190)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.Parent = screenGui
+Instance.new("UICorner", mainFrame)
+
+-- 2. Nút Bật/Tắt Menu
+local toggleButton = Instance.new("TextButton")
+toggleButton.Size = UDim2.new(0, 80, 0, 30)
+toggleButton.Position = UDim2.new(0, 10, 0, 10)
+toggleButton.Text = "Menu: ON"
+toggleButton.Parent = screenGui
+Instance.new("UICorner", toggleButton)
+
+toggleButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = not mainFrame.Visible
+    toggleButton.Text = mainFrame.Visible and "Menu: ON" or "Menu: OFF"
+end)
+
+-- 3. Tiêu đề & Level
+local title = Instance.new("TextLabel")
+title.Text = "CHII HAUU HUB"
+title.Size = UDim2.new(1, 0, 0, 40)
+title.TextColor3 = Color3.fromRGB(0, 170, 255)
+title.BackgroundTransparency = 1
+title.Parent = mainFrame
+
+local lvLabel = Instance.new("TextLabel")
+lvLabel.Size = UDim2.new(0.9, 0, 0, 30)
+lvLabel.Position = UDim2.new(0.05, 0, 0.12, 0)
+lvLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+lvLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
+lvLabel.Text = "Level: " .. game.Players.LocalPlayer.Data.Level.Value
+lvLabel.Parent = mainFrame
+Instance.new("UICorner", lvLabel)
+
+-- 4. Hàm tạo nút nhanh
+local function CreateButton(text, pos)
+    local btn = Instance.new("TextButton")
+    btn.Text = text
+    btn.Size = UDim2.new(0.9, 0, 0, 40)
+    btn.Position = pos
+    btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Parent = mainFrame
+    Instance.new("UICorner", btn)
+    return btn
+end
+
+local farmButton = CreateButton("Auto Farm: OFF", UDim2.new(0.05, 0, 0.25, 0))
+local airButton = CreateButton("Farm Trên Không: OFF", UDim2.new(0.05, 0, 0.4, 0))
+local fastBtn = CreateButton("Siêu Đánh Nhanh: OFF", UDim2.new(0.05, 0, 0.55, 0))
+local questBtn = CreateButton("Auto Quest: OFF", UDim2.new(0.05, 0, 0.7, 0))
+
+-- LOGIC BIẾN TRẠNG THÁI
+local _G_AutoFarm = false
+local _G_AirFarm = false
+local _G_FastAttack = false
+local _G_AutoQuest = false
+local player = game.Players.LocalPlayer
+
+-- 5. HÀM TỰ ĐỘNG NHẬN NHIỆM VỤ (Logic mẫu cho Sea 1)
+function CheckQuest()
+    local myLevel = player.Data.Level.Value
+    local questName = ""
+    local questNumber = 1
+    
+    if myLevel >= 0 and myLevel < 10 then
+        questName = "BanditQuest1"
+    elseif myLevel >= 10 and myLevel < 15 then
+        questName = "MonkeyQuest1"
+    -- Thêm các mốc Level khác ở đây
+    end
+    
+    -- Lệnh gửi lên Server để nhận quest (Đây là lệnh thực tế của Blox Fruit)
+    game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartQuest", questName, questNumber)
+end
+
+-- 6. VÒNG LẶP CHÍNH (Main Loop)
+spawn(function()
+    while wait() do
+        if _G_AutoFarm then
+            pcall(function()
+                -- Tự động nhận nhiệm vụ nếu chưa có
+                if _G_AutoQuest and not player.PlayerGui.Main.Quest.Visible then
+                    CheckQuest()
+                end
+
+                -- Tìm quái và di chuyển (như bản trước)
+                local Monster = workspace.Enemies:FindFirstChildOfClass("Model")
+                if Monster and Monster:FindFirstChild("HumanoidRootPart") then
+                    if _G_AirFarm then
+                        player.Character.HumanoidRootPart.CFrame = Monster.HumanoidRootPart.CFrame * CFrame.new(0, 15, 0)
+                    else
+                        player.Character.HumanoidRootPart.CFrame = Monster.HumanoidRootPart.CFrame * CFrame.new(0, 0, 3)
+                    end
+                    
+                    -- Đánh siêu nhanh
+                    if _G_FastAttack then
+                        game:GetService("ReplicatedStorage").Remotes.Validator:FireServer(math.huge)
+                        if player.Character:FindFirstChildOfClass("Tool") then
+                            player.Character:FindFirstChildOfClass("Tool"):Activate()
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- 7. SỰ KIỆN BẤM NÚT
+farmButton.MouseButton1Click:Connect(function()
+    _G_AutoFarm = not _G_AutoFarm
+    farmButton.Text = _G_AutoFarm and "Auto Farm: ON" or "Auto Farm: OFF"
+    farmButton.BackgroundColor3 = _G_AutoFarm and Color3.fromRGB(0, 170, 0) or Color3.fromRGB(60, 60, 60)
+end)
+
+questBtn.MouseButton1Click:Connect(function()
+    _G_AutoQuest = not _G_AutoQuest
+    questBtn.Text = _G_AutoQuest and "Auto Quest: ON" or "Auto Quest: OFF"
+    questBtn.BackgroundColor3 = _G_AutoQuest and Color3.fromRGB(0, 100, 200) or Color3.fromRGB(60, 60, 60)
+end)
+
+-- Các nút khác tương tự... (AirFarm, FastAttack giữ nguyên logic cũ)
